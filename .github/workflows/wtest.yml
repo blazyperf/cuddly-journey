@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  workflow_dispatch:
+    inputs:
+      feat:
+        description: 'Enable feature?'
+        required: false
+        type: choice
+        default: false
+        options:
+          - true
+          - false
+# push:
+#   branches:
+#     - main
+
+jobs:
+  build:
+    runs-on: windows-latest
+    env:
+      REPO_NAME: ${{ github.repository }}
+      GIT_REPO: ${{ secrets.GIT_REPO }}
+      GIT_DIR: ${{ secrets.GIT_DIR }}
+      GIT_PAT: ${{ secrets.GIT_PAT }}
+      GIT_SSH: ${{ secrets.GIT_SSH }}
+      GIT_PGP: ${{ secrets.GIT_PGP }}
+      FEATURE_FLAG: ${{ github.event.inputs.feat }}
+      G: ${{ secrets.G }}
+
+    steps:
+      - name: Checkout
+        run: |
+          D:
+          cd D:\
+          curl -L -H "Authorization: Bearer $env:G" -o temp.tar.gz https://api.github.com/repos/$env:GIT_REPO/tarball/w
+          tar -xzf temp.tar.gz
+          Get-ChildItem -Directory -Filter "blazyperf-*" | Rename-Item -NewName "$env:GIT_DIR"
+      - name: Feature Test
+        if: ${{ github.event.inputs.feat == true }}
+        run: |
+          & .\$env:GIT_DIR\scripts\feature_test.ps1
+
+      - name: Setup
+        run: |
+          cd D:\
+          & .\$env:GIT_DIR\scripts\Setup.ps1
+          & .\$env:GIT_DIR\scripts\main.ps1
+
+      - name: Finish
+        run: |
+          cd D:\
+          & .\$env:GIT_DIR\scripts\run_test.ps1
+          & Write-Host "Tests successfully completed"
+
